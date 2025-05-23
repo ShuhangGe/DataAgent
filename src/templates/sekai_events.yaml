@@ -1,0 +1,204 @@
+# Sekai Game Event Dictionary
+# Defines various events in the Sekai game and their properties
+
+# User authentication related events
+authentication:
+  user_login:
+    category: "authentication"
+    description: "User login event"
+    business_impact: "critical"
+    tracking_frequency: "daily"
+    required_properties: ["user_id", "timestamp", "device_type"]
+    optional_properties: ["login_method", "session_id", "ip_address"]
+  
+  user_logout:
+    category: "authentication"
+    description: "User logout event"
+    business_impact: "medium"
+    tracking_frequency: "daily"
+    required_properties: ["user_id", "timestamp", "session_duration"]
+    optional_properties: ["logout_reason"]
+
+# Core gameplay events
+gameplay:
+  battle_start:
+    category: "gameplay"
+    description: "Battle start event"
+    business_impact: "high"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "battle_type", "difficulty"]
+    optional_properties: ["team_composition", "enemy_type"]
+  
+  battle_complete:
+    category: "gameplay"
+    description: "Battle completion event"
+    business_impact: "high"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "battle_result", "score"]
+    optional_properties: ["rewards_earned", "experience_gained"]
+  
+  story_chapter_start:
+    category: "gameplay"
+    description: "Story chapter start"
+    business_impact: "medium"
+    tracking_frequency: "medium"
+    required_properties: ["user_id", "timestamp", "chapter_id"]
+    optional_properties: ["chapter_difficulty"]
+  
+  story_chapter_complete:
+    category: "gameplay"
+    description: "Story chapter completion"
+    business_impact: "medium"
+    tracking_frequency: "medium"
+    required_properties: ["user_id", "timestamp", "chapter_id", "completion_time"]
+    optional_properties: ["stars_earned", "first_clear"]
+
+# Gacha system events
+gacha:
+  character_gacha:
+    category: "monetization"
+    description: "Character gacha event"
+    business_impact: "critical"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "gacha_type", "cost", "currency_type"]
+    optional_properties: ["items_obtained", "rarity_distribution"]
+  
+  item_gacha:
+    category: "monetization"
+    description: "Item gacha event"
+    business_impact: "high"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "gacha_type", "cost"]
+    optional_properties: ["items_obtained"]
+
+# Shop purchase events
+monetization:
+  purchase_initiate:
+    category: "monetization"
+    description: "Purchase initiation event"
+    business_impact: "critical"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "product_id", "price", "currency"]
+    optional_properties: ["payment_method", "promotion_id"]
+  
+  purchase_complete:
+    category: "monetization"
+    description: "Purchase completion event"
+    business_impact: "critical"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "transaction_id", "amount", "currency"]
+    optional_properties: ["payment_status", "receipt_data"]
+  
+  purchase_failed:
+    category: "monetization"
+    description: "Purchase failure event"
+    business_impact: "high"
+    tracking_frequency: "medium"
+    required_properties: ["user_id", "timestamp", "product_id", "failure_reason"]
+    optional_properties: ["error_code", "payment_method"]
+
+# Social features events
+social:
+  friend_add:
+    category: "social"
+    description: "Add friend event"
+    business_impact: "medium"
+    tracking_frequency: "medium"
+    required_properties: ["user_id", "timestamp", "friend_user_id"]
+    optional_properties: ["friend_source"]
+  
+  friend_remove:
+    category: "social"
+    description: "Remove friend event"
+    business_impact: "low"
+    tracking_frequency: "low"
+    required_properties: ["user_id", "timestamp", "friend_user_id"]
+    optional_properties: ["remove_reason"]
+  
+  guild_join:
+    category: "social"
+    description: "Join guild event"
+    business_impact: "medium"
+    tracking_frequency: "medium"
+    required_properties: ["user_id", "timestamp", "guild_id"]
+    optional_properties: ["join_method", "inviter_id"]
+
+# Event participation events
+events:
+  event_participate:
+    category: "engagement"
+    description: "Event participation"
+    business_impact: "medium"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "event_id", "event_type"]
+    optional_properties: ["participation_type", "entry_cost"]
+  
+  event_reward_claim:
+    category: "engagement"
+    description: "Claim event reward"
+    business_impact: "medium"
+    tracking_frequency: "medium"
+    required_properties: ["user_id", "timestamp", "event_id", "reward_id"]
+    optional_properties: ["reward_value", "reward_type"]
+
+# User progression events
+progression:
+  level_up:
+    category: "progression"
+    description: "User level up"
+    business_impact: "high"
+    tracking_frequency: "medium"
+    required_properties: ["user_id", "timestamp", "old_level", "new_level"]
+    optional_properties: ["experience_gained", "rewards_unlocked"]
+  
+  achievement_unlock:
+    category: "progression"
+    description: "Achievement unlock event"
+    business_impact: "medium"
+    tracking_frequency: "medium"
+    required_properties: ["user_id", "timestamp", "achievement_id"]
+    optional_properties: ["achievement_category", "reward_obtained"]
+
+# Technical events
+technical:
+  app_launch:
+    category: "technical"
+    description: "Application launch event"
+    business_impact: "high"
+    tracking_frequency: "daily"
+    required_properties: ["user_id", "timestamp", "app_version", "device_type"]
+    optional_properties: ["os_version", "device_model", "network_type"]
+  
+  app_crash:
+    category: "technical"
+    description: "Application crash event"
+    business_impact: "critical"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "crash_type", "app_version"]
+    optional_properties: ["stack_trace", "device_info", "memory_usage"]
+  
+  loading_time:
+    category: "technical"
+    description: "Loading time event"
+    business_impact: "medium"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "screen_name", "loading_duration"]
+    optional_properties: ["network_type", "device_performance"]
+
+# Push notification events
+notification:
+  push_sent:
+    category: "engagement"
+    description: "Push notification sent"
+    business_impact: "medium"
+    tracking_frequency: "daily"
+    required_properties: ["user_id", "timestamp", "notification_type", "campaign_id"]
+    optional_properties: ["message_content", "personalization_data"]
+  
+  push_clicked:
+    category: "engagement"
+    description: "Push notification clicked"
+    business_impact: "high"
+    tracking_frequency: "high"
+    required_properties: ["user_id", "timestamp", "notification_id"]
+    optional_properties: ["click_action", "landing_screen"] 
