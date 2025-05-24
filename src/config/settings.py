@@ -32,7 +32,6 @@ class OpenAISettings(BaseSettings):
 class DatabaseSettings(BaseSettings):
     """Database configuration"""
     url: str = Field(default="sqlite:///data/sekai_analysis.db", env="DATABASE_URL")
-    redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
     max_connections: int = Field(default=20, env="DB_MAX_CONNECTIONS")
     
     class Config:
