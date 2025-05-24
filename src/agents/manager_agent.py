@@ -1,6 +1,6 @@
 """
-Manager Agent - Orchestrator for Sekai Data Analysis Multi-Agent System
-Built with CrewAI framework for robust agent coordination
+Dynamic Manager Agent - Question-Answering Orchestrator
+Built with CrewAI framework for flexible multi-agent coordination
 """
 
 from crewai import Agent, Task, Crew, Process
@@ -8,265 +8,566 @@ from crewai.tools import BaseTool
 from typing import Dict, List, Any, Optional
 import yaml
 import json
+import re
 from datetime import datetime, timedelta
 from jinja2 import Template
+import sqlalchemy as sa
+from sqlalchemy import inspect
 
-from src.config.settings import settings, ANALYSIS_TEMPLATES
+from src.config.settings import settings
 from src.models.data_models import (
-    AnalysisRequest, AnalysisResult, TemplateConfig, SekaiContext,
-    AnalysisType, ValidationResult, ValidationLevel
+    UserQuestion, QuestionType, DatabaseSchema, DatabaseContext, 
+    DynamicAnalysisResult, ValidationResult, ValidationLevel
 )
 
-class ContextRetrievalTool(BaseTool):
-    """Tool for retrieving Sekai product context and templates"""
+class QuestionUnderstandingTool(BaseTool):
+    """Tool for parsing and understanding natural language questions"""
     
-    name: str = "context_retrieval"
-    description: str = "Retrieve Sekai product context, event definitions, and analysis templates"
+    name: str = "question_understanding"
+    description: str = "Parse natural language questions to extract intent, entities, and analysis requirements"
     
-    def _run(self, query: str) -> Dict[str, Any]:
-        """Load context based on query type"""
+    def _run(self, question_text: str) -> Dict[str, Any]:
+        """Parse and understand user question"""
         try:
-            if "events" in query.lower():
-                return self._load_event_dictionary()
-            elif "template" in query.lower():
-                return self._load_analysis_templates()
-            elif "kpi" in query.lower():
-                return self._load_kpi_definitions()
-            else:
-                return self._load_full_context()
-        except Exception as e:
-            return {"error": f"Context retrieval failed: {str(e)}"}
-    
-    def _load_event_dictionary(self) -> Dict[str, Any]:
-        """Load Sekai event definitions"""
-        try:
-            with open(settings.sekai.event_dictionary_path, 'r', encoding='utf-8') as f:
-                events = yaml.safe_load(f)
-            return {"events": events, "status": "success"}
-        except FileNotFoundError:
-            # Provide default Sekai events if file not found
-            return {
-                "events": {
-                    "user_login": {"category": "auth", "impact": "high", "frequency": "daily"},
-                    "character_gacha": {"category": "monetization", "impact": "critical", "frequency": "high"},
-                    "story_complete": {"category": "engagement", "impact": "medium", "frequency": "medium"},
-                    "battle_start": {"category": "gameplay", "impact": "high", "frequency": "high"},
-                    "purchase_complete": {"category": "monetization", "impact": "critical", "frequency": "low"}
-                },
-                "status": "default_loaded"
-            }
-    
-    def _load_analysis_templates(self) -> Dict[str, Any]:
-        """Load available analysis templates"""
-        return {
-            "templates": ANALYSIS_TEMPLATES,
-            "available_types": list(ANALYSIS_TEMPLATES.keys()),
-            "status": "success"
-        }
-    
-    def _load_kpi_definitions(self) -> Dict[str, Any]:
-        """Load KPI definitions"""
-        try:
-            with open(settings.sekai.kpi_definitions_path, 'r', encoding='utf-8') as f:
-                kpis = yaml.safe_load(f)
-            return {"kpis": kpis, "status": "success"}
-        except FileNotFoundError:
-            return {
-                "kpis": {
-                    "DAU": "Daily Active Users",
-                    "ARPU": "Average Revenue Per User", 
-                    "Retention_D1": "Day 1 Retention Rate",
-                    "Retention_D7": "Day 7 Retention Rate",
-                    "LTV": "Lifetime Value",
-                    "ROAS": "Return on Ad Spend"
-                },
-                "status": "default_loaded"
-            }
-    
-    def _load_full_context(self) -> Dict[str, Any]:
-        """Load complete Sekai context"""
-        events = self._load_event_dictionary()
-        templates = self._load_analysis_templates()
-        kpis = self._load_kpi_definitions()
-        
-        return {
-            "sekai_context": {
-                "domain": settings.sekai.domain,
-                "timezone": settings.sekai.timezone,
-                "events": events.get("events", {}),
-                "templates": templates.get("templates", {}),
-                "kpis": kpis.get("kpis", {})
-            },
-            "status": "success"
-        }
-
-class TemplateParameterizationTool(BaseTool):
-    """Tool for template selection and parameter rendering"""
-    
-    name: str = "template_parameterization"
-    description: str = "Select appropriate analysis template and render parameters based on user requirements"
-    
-    def _run(self, user_query: str, analysis_type: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
-        """Parameterize analysis template"""
-        try:
-            if analysis_type not in ANALYSIS_TEMPLATES:
-                return {"error": f"Unknown analysis type: {analysis_type}"}
+            # Clean and normalize question
+            question = question_text.strip().lower()
             
-            template_config = ANALYSIS_TEMPLATES[analysis_type]
+            # Detect question type
+            question_type = self._detect_question_type(question)
             
-            # Render template with parameters
-            rendered_config = self._render_template(template_config, parameters)
+            # Extract entities (tables, columns, metrics)
+            entities = self._extract_entities(question)
             
-            # Validate required parameters
-            validation_result = self._validate_parameters(rendered_config, parameters)
+            # Extract time filters
+            time_filters = self._extract_time_filters(question)
+            
+            # Extract conditions and groupings
+            conditions = self._extract_conditions(question)
+            grouping = self._extract_grouping(question)
+            
+            # Determine analysis methods needed
+            analysis_methods = self._determine_analysis_methods(question_type, question)
+            
+            # Determine output format
+            output_format = self._determine_output_format(question)
             
             return {
-                "template_config": rendered_config,
-                "validation": validation_result,
+                "question_type": question_type,
+                "entities": entities,
+                "time_filters": time_filters,
+                "conditions": conditions,
+                "grouping": grouping,
+                "analysis_methods": analysis_methods,
+                "output_format": output_format,
+                "confidence": self._calculate_confidence(question_type, entities),
                 "status": "success"
             }
             
         except Exception as e:
-            return {"error": f"Template parameterization failed: {str(e)}"}
+            return {"error": f"Question understanding failed: {str(e)}"}
     
-    def _render_template(self, template_config: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
-        """Render template with Jinja2"""
-        rendered = template_config.copy()
+    def _detect_question_type(self, question: str) -> QuestionType:
+        """Detect the type of question being asked"""
         
-        # Add default date range if not specified
-        if "date_range" not in parameters:
-            end_date = datetime.now().date()
-            start_date = end_date - timedelta(days=30)
-            parameters["date_range"] = {
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat()
-            }
+        # Data exploration patterns
+        if any(pattern in question for pattern in [
+            "what data", "show me data", "available data", "tables", "columns"
+        ]):
+            return QuestionType.DATA_EXPLORATION
         
-        # Render string templates
-        for key, value in rendered.items():
-            if isinstance(value, str) and "{{" in value:
-                template = Template(value)
-                rendered[key] = template.render(**parameters)
+        # Statistical summary patterns
+        elif any(pattern in question for pattern in [
+            "summary", "average", "total", "count", "mean", "statistics", "overview"
+        ]):
+            return QuestionType.STATISTICAL_SUMMARY
         
-        return rendered
+        # Trend analysis patterns
+        elif any(pattern in question for pattern in [
+            "trend", "over time", "change", "growth", "decline", "monthly", "daily", "yearly"
+        ]):
+            return QuestionType.TREND_ANALYSIS
+        
+        # Comparison patterns
+        elif any(pattern in question for pattern in [
+            "compare", "vs", "versus", "difference", "between", "against"
+        ]):
+            return QuestionType.COMPARISON
+        
+        # Correlation patterns
+        elif any(pattern in question for pattern in [
+            "correlate", "relationship", "factors", "influence", "affect", "impact"
+        ]):
+            return QuestionType.CORRELATION
+        
+        # Prediction patterns
+        elif any(pattern in question for pattern in [
+            "predict", "forecast", "future", "churn", "likely to", "probability"
+        ]):
+            return QuestionType.PREDICTION
+        
+        # Default to custom query
+        else:
+            return QuestionType.CUSTOM_QUERY
     
-    def _validate_parameters(self, config: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate template parameters"""
-        missing_required = []
-        for field in config.get("required_fields", []):
-            if field not in parameters and field not in ["user_id", "timestamp", "event_name"]:
-                missing_required.append(field)
+    def _extract_entities(self, question: str) -> List[str]:
+        """Extract relevant entities from question"""
+        entities = []
         
-        warnings = []
-        if "date_range" in parameters:
-            date_range = parameters["date_range"]
-            if isinstance(date_range, dict):
-                start = datetime.fromisoformat(date_range["start_date"])
-                end = datetime.fromisoformat(date_range["end_date"])
-                days_diff = (end - start).days
+        # Common database entities
+        entity_patterns = {
+            "users": ["user", "users", "customer", "customers"],
+            "events": ["event", "events", "activity", "activities", "action", "actions"],
+            "sessions": ["session", "sessions", "visit", "visits"],
+            "revenue": ["revenue", "sales", "purchase", "purchases", "money"],
+            "time": ["time", "date", "timestamp", "when", "day", "month", "year"],
+            "retention": ["retention", "return", "comeback", "stay"],
+            "engagement": ["engagement", "activity", "usage", "behavior"],
+            "conversion": ["conversion", "convert", "funnel", "complete"],
+            "churn": ["churn", "leave", "quit", "uninstall"]
+        }
+        
+        for entity, patterns in entity_patterns.items():
+            if any(pattern in question for pattern in patterns):
+                entities.append(entity)
+        
+        return entities
+    
+    def _extract_time_filters(self, question: str) -> Dict[str, Any]:
+        """Extract time-based filters from question"""
+        time_filters = {}
+        
+        # Common time patterns
+        if "last week" in question:
+            time_filters["period"] = "last_week"
+        elif "last month" in question:
+            time_filters["period"] = "last_month"
+        elif "last year" in question:
+            time_filters["period"] = "last_year"
+        elif "today" in question:
+            time_filters["period"] = "today"
+        elif "yesterday" in question:
+            time_filters["period"] = "yesterday"
+        
+        # Date range patterns
+        date_pattern = r'(\d{4}-\d{2}-\d{2})'
+        dates = re.findall(date_pattern, question)
+        if len(dates) >= 2:
+            time_filters["start_date"] = dates[0]
+            time_filters["end_date"] = dates[1]
+        elif len(dates) == 1:
+            time_filters["date"] = dates[0]
+        
+        return time_filters
+    
+    def _extract_conditions(self, question: str) -> List[str]:
+        """Extract WHERE conditions from question"""
+        conditions = []
+        
+        # Common condition patterns
+        if "new users" in question or "new customers" in question:
+            conditions.append("user_type = 'new'")
+        elif "returning users" in question:
+            conditions.append("user_type = 'returning'")
+        
+        if "premium" in question:
+            conditions.append("user_tier = 'premium'")
+        elif "free" in question:
+            conditions.append("user_tier = 'free'")
+        
+        if "mobile" in question:
+            conditions.append("platform = 'mobile'")
+        elif "web" in question:
+            conditions.append("platform = 'web'")
+        
+        return conditions
+    
+    def _extract_grouping(self, question: str) -> List[str]:
+        """Extract GROUP BY requirements from question"""
+        grouping = []
+        
+        if any(word in question for word in ["by day", "daily", "per day"]):
+            grouping.append("date")
+        elif any(word in question for word in ["by week", "weekly", "per week"]):
+            grouping.append("week")
+        elif any(word in question for word in ["by month", "monthly", "per month"]):
+            grouping.append("month")
+        
+        if any(word in question for word in ["by country", "per country"]):
+            grouping.append("country")
+        elif any(word in question for word in ["by device", "per device"]):
+            grouping.append("device_type")
+        elif any(word in question for word in ["by platform", "per platform"]):
+            grouping.append("platform")
+        
+        return grouping
+    
+    def _determine_analysis_methods(self, question_type: QuestionType, question: str) -> List[str]:
+        """Determine what analysis methods are needed"""
+        methods = []
+        
+        if question_type == QuestionType.DATA_EXPLORATION:
+            methods = ["schema_inspection", "data_profiling"]
+        elif question_type == QuestionType.STATISTICAL_SUMMARY:
+            methods = ["descriptive_statistics", "aggregation"]
+        elif question_type == QuestionType.TREND_ANALYSIS:
+            methods = ["time_series_analysis", "trend_calculation"]
+        elif question_type == QuestionType.COMPARISON:
+            methods = ["comparative_analysis", "segmentation"]
+        elif question_type == QuestionType.CORRELATION:
+            methods = ["correlation_analysis", "statistical_modeling"]
+        elif question_type == QuestionType.PREDICTION:
+            methods = ["predictive_modeling", "machine_learning"]
+        else:
+            methods = ["custom_analysis"]
+        
+        return methods
+    
+    def _determine_output_format(self, question: str) -> str:
+        """Determine desired output format"""
+        if any(word in question for word in ["chart", "graph", "plot", "visualize"]):
+            return "visualization"
+        elif any(word in question for word in ["table", "list", "rows"]):
+            return "table"
+        elif any(word in question for word in ["summary", "brief", "overview"]):
+            return "summary"
+        else:
+            return "detailed"
+    
+    def _calculate_confidence(self, question_type: QuestionType, entities: List[str]) -> float:
+        """Calculate confidence in question understanding"""
+        confidence = 0.5  # Base confidence
+        
+        # Higher confidence if we detected specific entities
+        confidence += len(entities) * 0.1
+        
+        # Higher confidence for clear question types
+        if question_type != QuestionType.CUSTOM_QUERY:
+            confidence += 0.2
+        
+        return min(confidence, 1.0)
+
+class DatabaseSchemaInspectionTool(BaseTool):
+    """Tool for inspecting database schema and understanding available data"""
+    
+    name: str = "database_schema_inspection"
+    description: str = "Inspect database schema to understand available tables, columns, and data"
+    
+    def _run(self, entities: List[str] = None) -> Dict[str, Any]:
+        """Inspect database schema and return relevant information"""
+        try:
+            # Connect to database
+            engine = sa.create_engine(settings.database.url)
+            inspector = inspect(engine)
+            
+            # Get all table names
+            table_names = inspector.get_table_names()
+            
+            # Build schema information
+            schemas = []
+            for table_name in table_names:
+                columns = inspector.get_columns(table_name)
                 
-                if days_diff > 365:
-                    warnings.append("Large date range may impact performance")
-                elif days_diff < 1:
-                    warnings.append("Date range too small for meaningful analysis")
-        
-        return {
-            "missing_required": missing_required,
-            "warnings": warnings,
-            "is_valid": len(missing_required) == 0
-        }
-
-class TaskOrchestrationTool(BaseTool):
-    """Tool for coordinating sub-agent tasks"""
-    
-    name: str = "task_orchestration"
-    description: str = "Generate and coordinate task sequences for sub-agents"
-    
-    def _run(self, analysis_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate task sequence for analysis"""
-        try:
-            analysis_type = analysis_config.get("analysis_type")
+                # Get sample data
+                sample_data = self._get_sample_data(engine, table_name)
+                
+                schema = DatabaseSchema(
+                    table_name=table_name,
+                    columns=[{
+                        "name": col["name"],
+                        "type": str(col["type"]),
+                        "nullable": col["nullable"]
+                    } for col in columns],
+                    sample_data=sample_data
+                )
+                schemas.append(schema)
             
-            # Define standard task sequence
-            task_sequence = [
-                {
-                    "agent": "data_pulling",
-                    "task": "extract_data",
-                    "parameters": {
-                        "data_source": analysis_config.get("data_source", {}),
-                        "filters": analysis_config.get("filters", {}),
-                        "date_range": analysis_config.get("date_range", {}),
-                        "sample_size": settings.analysis.sample_size
-                    }
-                },
-                {
-                    "agent": "preprocessing",
-                    "task": "clean_and_prepare",
-                    "parameters": {
-                        "timezone": settings.sekai.timezone,
-                        "derive_features": True,
-                        "quality_threshold": settings.analysis.min_data_quality_score
-                    }
-                },
-                {
-                    "agent": "analysis",
-                    "task": f"execute_{analysis_type}",
-                    "parameters": analysis_config.get("analysis_parameters", {})
-                },
-                {
-                    "agent": "qa",
-                    "task": "validate_results",
-                    "parameters": {
-                        "quality_rules": analysis_config.get("quality_rules", []),
-                        "business_rules": analysis_config.get("business_rules", [])
-                    }
-                },
-                {
-                    "agent": "insight",
-                    "task": "generate_summary",
-                    "parameters": {
-                        "include_recommendations": True,
-                        "output_format": "markdown"
-                    }
-                }
-            ]
+            # Filter relevant schemas based on entities
+            if entities:
+                relevant_schemas = self._filter_relevant_schemas(schemas, entities)
+            else:
+                relevant_schemas = schemas
+            
+            # Generate database context
+            db_context = DatabaseContext(
+                schemas=relevant_schemas,
+                available_metrics=self._identify_metrics(relevant_schemas),
+                common_queries=self._suggest_common_queries(relevant_schemas)
+            )
             
             return {
-                "task_sequence": task_sequence,
-                "estimated_time": len(task_sequence) * 60,  # 1 minute per task estimate
+                "database_context": db_context.dict(),
+                "total_tables": len(table_names),
+                "relevant_tables": len(relevant_schemas),
                 "status": "success"
             }
             
         except Exception as e:
-            return {"error": f"Task orchestration failed: {str(e)}"}
+            return {"error": f"Database inspection failed: {str(e)}"}
+    
+    def _get_sample_data(self, engine, table_name: str, limit: int = 5) -> Dict[str, Any]:
+        """Get sample data from table"""
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(sa.text(f"SELECT * FROM {table_name} LIMIT {limit}"))
+                rows = result.fetchall()
+                columns = result.keys()
+                
+                return {
+                    "columns": list(columns),
+                    "sample_rows": [dict(zip(columns, row)) for row in rows],
+                    "row_count": len(rows)
+                }
+        except Exception:
+            return {"error": "Could not fetch sample data"}
+    
+    def _filter_relevant_schemas(self, schemas: List[DatabaseSchema], entities: List[str]) -> List[DatabaseSchema]:
+        """Filter schemas relevant to the user's question"""
+        relevant = []
+        
+        for schema in schemas:
+            # Check if table name matches entities
+            table_relevant = any(entity in schema.table_name.lower() for entity in entities)
+            
+            # Check if columns match entities
+            column_relevant = any(
+                any(entity in col["name"].lower() for entity in entities)
+                for col in schema.columns
+            )
+            
+            if table_relevant or column_relevant:
+                relevant.append(schema)
+        
+        # If no specific matches, return all schemas for data exploration
+        return relevant if relevant else schemas
+    
+    def _identify_metrics(self, schemas: List[DatabaseSchema]) -> List[str]:
+        """Identify available metrics from schema"""
+        metrics = []
+        
+        for schema in schemas:
+            for col in schema.columns:
+                col_name = col["name"].lower()
+                col_type = col["type"].lower()
+                
+                # Identify common metric patterns
+                if "count" in col_name or "total" in col_name:
+                    metrics.append(f"{schema.table_name}.{col['name']}")
+                elif "revenue" in col_name or "amount" in col_name:
+                    metrics.append(f"{schema.table_name}.{col['name']}")
+                elif "rate" in col_name or "ratio" in col_name:
+                    metrics.append(f"{schema.table_name}.{col['name']}")
+                elif col_type in ["integer", "float", "decimal", "numeric"]:
+                    metrics.append(f"{schema.table_name}.{col['name']}")
+        
+        return metrics
+    
+    def _suggest_common_queries(self, schemas: List[DatabaseSchema]) -> List[str]:
+        """Suggest common queries based on schema"""
+        queries = []
+        
+        for schema in schemas:
+            table_name = schema.table_name
+            
+            # Basic count query
+            queries.append(f"SELECT COUNT(*) FROM {table_name}")
+            
+            # Date-based queries if timestamp column exists
+            timestamp_cols = [col["name"] for col in schema.columns 
+                            if "timestamp" in col["name"].lower() or "date" in col["name"].lower()]
+            
+            if timestamp_cols:
+                ts_col = timestamp_cols[0]
+                queries.append(f"SELECT DATE({ts_col}) as date, COUNT(*) FROM {table_name} GROUP BY DATE({ts_col})")
+        
+        return queries
+
+class DynamicTaskPlanningTool(BaseTool):
+    """Tool for creating dynamic task plans based on user questions"""
+    
+    name: str = "dynamic_task_planning"
+    description: str = "Create custom agent workflows based on user questions and database context"
+    
+    def _run(self, user_question: UserQuestion, db_context: DatabaseContext) -> Dict[str, Any]:
+        """Create dynamic task plan for answering user question"""
+        try:
+            # Determine required agents and tasks
+            task_plan = self._create_task_plan(user_question, db_context)
+            
+            # Estimate execution time
+            estimated_time = len(task_plan) * 30  # 30 seconds per task
+            
+            # Add quality checks
+            quality_checks = self._determine_quality_checks(user_question)
+            
+            return {
+                "task_plan": task_plan,
+                "estimated_time": estimated_time,
+                "quality_checks": quality_checks,
+                "plan_confidence": self._calculate_plan_confidence(task_plan, db_context),
+                "status": "success"
+            }
+            
+        except Exception as e:
+            return {"error": f"Task planning failed: {str(e)}"}
+    
+    def _create_task_plan(self, question: UserQuestion, db_context: DatabaseContext) -> List[Dict[str, Any]]:
+        """Create task plan based on question type and database context"""
+        tasks = []
+        
+        # Always start with data pulling if we need database data
+        if question.target_tables or question.question_type != QuestionType.DATA_EXPLORATION:
+            tasks.append({
+                "agent": "data_pulling",
+                "task": "extract_relevant_data",
+                "parameters": {
+                    "target_tables": question.target_tables,
+                    "columns": question.required_columns,
+                    "time_filters": question.time_filters,
+                    "conditions": question.conditions,
+                    "sample_size": 50000
+                }
+            })
+        
+        # Add preprocessing if needed
+        if question.question_type not in [QuestionType.DATA_EXPLORATION]:
+            tasks.append({
+                "agent": "preprocessing", 
+                "task": "prepare_for_analysis",
+                "parameters": {
+                    "grouping": question.grouping,
+                    "time_aggregation": "auto",
+                    "missing_data_strategy": "auto"
+                }
+            })
+        
+        # Add analysis tasks based on question type
+        if question.question_type == QuestionType.STATISTICAL_SUMMARY:
+            tasks.append({
+                "agent": "analysis",
+                "task": "calculate_summary_statistics",
+                "parameters": {
+                    "metrics": ["count", "mean", "median", "std"],
+                    "grouping": question.grouping
+                }
+            })
+        
+        elif question.question_type == QuestionType.TREND_ANALYSIS:
+            tasks.append({
+                "agent": "analysis",
+                "task": "analyze_trends",
+                "parameters": {
+                    "time_column": "timestamp",
+                    "metrics": question.entities,
+                    "trend_method": "linear"
+                }
+            })
+        
+        elif question.question_type == QuestionType.COMPARISON:
+            tasks.append({
+                "agent": "analysis", 
+                "task": "comparative_analysis",
+                "parameters": {
+                    "comparison_groups": question.grouping,
+                    "metrics": question.entities
+                }
+            })
+        
+        elif question.question_type == QuestionType.CORRELATION:
+            tasks.append({
+                "agent": "analysis",
+                "task": "correlation_analysis", 
+                "parameters": {
+                    "variables": question.entities,
+                    "method": "pearson"
+                }
+            })
+        
+        elif question.question_type == QuestionType.PREDICTION:
+            tasks.append({
+                "agent": "analysis",
+                "task": "predictive_modeling",
+                "parameters": {
+                    "target_variable": question.entities[0] if question.entities else "churn",
+                    "features": question.entities[1:] if len(question.entities) > 1 else "auto"
+                }
+            })
+        
+        # Add QA validation
+        tasks.append({
+            "agent": "qa",
+            "task": "validate_analysis_results",
+            "parameters": {
+                "question_context": question.question_text,
+                "expected_output": question.output_format
+            }
+        })
+        
+        # Add insight generation
+        tasks.append({
+            "agent": "insight",
+            "task": "generate_answer",
+            "parameters": {
+                "question": question.question_text,
+                "question_type": question.question_type,
+                "output_format": question.output_format
+            }
+        })
+        
+        return tasks
+    
+    def _determine_quality_checks(self, question: UserQuestion) -> List[str]:
+        """Determine quality checks needed for this question"""
+        checks = ["data_completeness", "result_validity"]
+        
+        if question.question_type == QuestionType.TREND_ANALYSIS:
+            checks.append("temporal_consistency")
+        elif question.question_type == QuestionType.PREDICTION:
+            checks.append("model_accuracy")
+        elif question.question_type == QuestionType.CORRELATION:
+            checks.append("statistical_significance")
+        
+        return checks
+    
+    def _calculate_plan_confidence(self, task_plan: List[Dict], db_context: DatabaseContext) -> float:
+        """Calculate confidence in the task plan"""
+        confidence = 0.7  # Base confidence
+        
+        # Higher confidence if we have relevant data
+        if db_context.schemas:
+            confidence += 0.2
+        
+        # Lower confidence for complex plans
+        if len(task_plan) > 5:
+            confidence -= 0.1
+        
+        return max(0.0, min(1.0, confidence))
 
 def create_manager_agent() -> Agent:
-    """Create and configure the Manager Agent using CrewAI"""
+    """Create and configure the Dynamic Manager Agent"""
     
-    # Initialize tools
-    context_tool = ContextRetrievalTool()
-    template_tool = TemplateParameterizationTool()
-    orchestration_tool = TaskOrchestrationTool()
+    # Initialize dynamic tools
+    question_tool = QuestionUnderstandingTool()
+    schema_tool = DatabaseSchemaInspectionTool()
+    planning_tool = DynamicTaskPlanningTool()
     
-    # Create agent with latest OpenAI model
+    # Create agent
     manager_agent = Agent(
-        role="Data Analysis Manager",
+        role="Dynamic Question-Answering Manager",
         goal="""
-        As the Data Analysis Manager for the Sekai system, I am responsible for:
-        1. Understanding user data analysis requirements
-        2. Loading Sekai product context and templates
-        3. Selecting appropriate analysis templates and configuring parameters
-        4. Coordinating execution sequence across sub-agents
-        5. Ensuring final result quality and completeness
+        As a Dynamic Question-Answering Manager, I am responsible for:
+        1. Understanding natural language questions from users
+        2. Inspecting database schema to understand available data
+        3. Creating custom workflows to answer specific questions
+        4. Coordinating multi-agent execution based on question requirements
+        5. Ensuring accurate and relevant answers to user questions
         """,
         backstory="""
-        I am a professional data analysis manager with deep understanding of the Sekai product
-        and extensive experience in data analysis. I can accurately understand user requirements,
-        select the most appropriate analysis methods, and ensure efficient execution of the entire
-        analysis workflow. I specialize in handling complex scenarios in game data analysis,
-        such as user retention, conversion funnels, user segmentation, and more.
+        I am an intelligent data analysis orchestrator with expertise in natural language 
+        understanding and dynamic workflow planning. I can interpret various types of questions 
+        about data and coordinate specialized agents to provide accurate, insightful answers. 
+        I adapt my approach based on the specific question and available data sources.
         """,
-        tools=[context_tool, template_tool, orchestration_tool],
+        tools=[question_tool, schema_tool, planning_tool],
         verbose=settings.agent.verbose,
         allow_delegation=False,
         max_execution_time=settings.agent.max_execution_time,
@@ -279,103 +580,96 @@ def create_manager_agent() -> Agent:
     
     return manager_agent
 
-class ManagerAgentController:
-    """Controller class for Manager Agent operations"""
+class DynamicManagerController:
+    """Controller for Dynamic Manager Agent operations"""
     
     def __init__(self):
         self.agent = create_manager_agent()
-        self.context_cache = {}
-        self.session_state = {}
+        self.question_cache = {}
+        self.schema_cache = {}
     
-    def process_analysis_request(self, request: AnalysisRequest) -> Dict[str, Any]:
-        """Process a complete analysis request"""
+    def process_user_question(self, question_text: str) -> Dict[str, Any]:
+        """Process a natural language question and create execution plan"""
         try:
-            # Step 1: Load context
-            context_result = self._load_context()
-            if "error" in context_result:
-                return {"status": "failed", "error": context_result["error"]}
+            # Step 1: Understand the question
+            question_tool = QuestionUnderstandingTool()
+            understanding_result = question_tool._run(question_text)
             
-            # Step 2: Clarify requirements and parameterize template
-            template_result = self._parameterize_template(request)
-            if "error" in template_result:
-                return {"status": "failed", "error": template_result["error"]}
+            if "error" in understanding_result:
+                return {"status": "failed", "error": understanding_result["error"]}
             
-            # Step 3: Generate task sequence
-            orchestration_result = self._orchestrate_tasks(request, template_result)
-            if "error" in orchestration_result:
-                return {"status": "failed", "error": orchestration_result["error"]}
+            # Create UserQuestion object
+            user_question = UserQuestion(
+                question_text=question_text,
+                question_type=understanding_result["question_type"],
+                entities=understanding_result["entities"],
+                time_filters=understanding_result["time_filters"],
+                conditions=understanding_result["conditions"],
+                grouping=understanding_result["grouping"],
+                analysis_methods=understanding_result["analysis_methods"],
+                output_format=understanding_result["output_format"]
+            )
+            
+            # Step 2: Inspect database schema
+            schema_tool = DatabaseSchemaInspectionTool()
+            schema_result = schema_tool._run(user_question.entities)
+            
+            if "error" in schema_result:
+                return {"status": "failed", "error": schema_result["error"]}
+            
+            db_context = DatabaseContext(**schema_result["database_context"])
+            
+            # Update question with relevant tables and columns
+            user_question.target_tables = [schema.table_name for schema in db_context.schemas]
+            user_question.required_columns = [
+                col["name"] for schema in db_context.schemas for col in schema.columns
+                if any(entity in col["name"].lower() for entity in user_question.entities)
+            ]
+            
+            # Step 3: Create dynamic task plan
+            planning_tool = DynamicTaskPlanningTool()
+            plan_result = planning_tool._run(user_question, db_context)
+            
+            if "error" in plan_result:
+                return {"status": "failed", "error": plan_result["error"]}
             
             return {
                 "status": "success",
-                "context": context_result,
-                "template_config": template_result,
-                "task_sequence": orchestration_result["task_sequence"],
-                "estimated_execution_time": orchestration_result["estimated_time"]
+                "question": user_question.dict(),
+                "database_context": db_context.dict(),
+                "task_plan": plan_result["task_plan"],
+                "estimated_time": plan_result["estimated_time"],
+                "confidence": understanding_result["confidence"]
             }
             
         except Exception as e:
-            return {"status": "failed", "error": f"Manager processing failed: {str(e)}"}
+            return {"status": "failed", "error": f"Question processing failed: {str(e)}"}
     
-    def _load_context(self) -> Dict[str, Any]:
-        """Load Sekai product context"""
-        if "sekai_context" not in self.context_cache:
-            context_tool = ContextRetrievalTool()
-            result = context_tool._run("full_context")
-            self.context_cache["sekai_context"] = result
+    def suggest_questions(self, db_context: DatabaseContext) -> List[str]:
+        """Suggest relevant questions based on available data"""
+        suggestions = []
         
-        return self.context_cache["sekai_context"]
-    
-    def _parameterize_template(self, request: AnalysisRequest) -> Dict[str, Any]:
-        """Parameterize analysis template based on request"""
-        template_tool = TemplateParameterizationTool()
+        for schema in db_context.schemas:
+            table_name = schema.table_name
+            
+            # Basic exploration questions
+            suggestions.append(f"What data is available in {table_name}?")
+            suggestions.append(f"Show me a summary of {table_name}")
+            
+            # Time-based questions if timestamp columns exist
+            timestamp_cols = [col["name"] for col in schema.columns 
+                            if "timestamp" in col["name"].lower() or "date" in col["name"].lower()]
+            if timestamp_cols:
+                suggestions.append(f"How has {table_name} activity changed over time?")
+                suggestions.append(f"What are the trends in {table_name}?")
+            
+            # User-related questions
+            if "user" in table_name.lower():
+                suggestions.append(f"How many users are active?")
+                suggestions.append(f"What is user retention like?")
+                suggestions.append(f"Compare user behavior by segment")
         
-        parameters = {
-            "user_query": request.user_query,
-            "date_range": request.date_range,
-            "filters": request.filters,
-            **request.custom_parameters
-        }
-        
-        return template_tool._run(
-            request.user_query,
-            request.analysis_type.value,
-            parameters
-        )
-    
-    def _orchestrate_tasks(self, request: AnalysisRequest, template_result: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate orchestrated task sequence"""
-        orchestration_tool = TaskOrchestrationTool()
-        
-        analysis_config = {
-            "analysis_type": request.analysis_type.value,
-            "data_source": request.data_source_config,
-            "filters": request.filters,
-            "date_range": request.date_range,
-            "analysis_parameters": request.custom_parameters,
-            "quality_rules": template_result.get("template_config", {}).get("quality_rules", []),
-            "business_rules": template_result.get("template_config", {}).get("business_rules", [])
-        }
-        
-        return orchestration_tool._run(analysis_config)
-    
-    def handle_agent_failure(self, failed_agent: str, error_details: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle sub-agent failures with recovery strategies"""
-        recovery_strategies = {
-            "data_pulling": ["retry_with_smaller_chunk", "switch_to_sample_data", "adjust_query_parameters"],
-            "preprocessing": ["skip_problematic_columns", "use_alternative_cleaning", "reduce_quality_threshold"],
-            "analysis": ["use_simpler_algorithm", "reduce_complexity", "fall_back_to_basic_stats"],
-            "qa": ["lower_validation_threshold", "skip_non_critical_checks", "manual_review_mode"],
-            "insight": ["use_template_summary", "basic_statistical_summary", "raw_data_summary"]
-        }
-        
-        strategies = recovery_strategies.get(failed_agent, ["manual_intervention_required"])
-        
-        return {
-            "failed_agent": failed_agent,
-            "error": error_details,
-            "recovery_strategies": strategies,
-            "recommended_action": strategies[0] if strategies else "manual_intervention_required"
-        }
+        return suggestions[:10]  # Limit to top 10 suggestions
 
 # Export the controller
-__all__ = ["ManagerAgentController", "create_manager_agent"] 
+__all__ = ["DynamicManagerController", "create_manager_agent"] 

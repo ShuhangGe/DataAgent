@@ -327,11 +327,85 @@ def deserialize_dataframe(data: Dict[str, Any]) -> pd.DataFrame:
     """Deserialize DataFrame from JSON storage"""
     return pd.DataFrame(data['data'])
 
+class QuestionType(str, Enum):
+    """Dynamic question types the system can answer"""
+    DATA_EXPLORATION = "data_exploration"      # "What data do we have?"
+    STATISTICAL_SUMMARY = "statistical_summary"  # "Show me summary of user activity"
+    TREND_ANALYSIS = "trend_analysis"         # "How has engagement changed over time?"
+    COMPARISON = "comparison"                 # "Compare user behavior between segments"
+    CORRELATION = "correlation"               # "What factors correlate with retention?"
+    PREDICTION = "prediction"                 # "Predict user churn"
+    CUSTOM_QUERY = "custom_query"            # Direct SQL or complex analysis
+
+class UserQuestion(BaseModel):
+    """Dynamic user question model"""
+    question_id: str = Field(default_factory=lambda: f"q_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}")
+    question_text: str = Field(description="Natural language question from user")
+    question_type: Optional[QuestionType] = Field(default=None, description="Detected question type")
+    
+    # Context extraction
+    entities: List[str] = Field(default_factory=list, description="Extracted entities (tables, columns, metrics)")
+    time_filters: Dict[str, Any] = Field(default_factory=dict, description="Time-based filters")
+    conditions: List[str] = Field(default_factory=list, description="WHERE conditions")
+    grouping: List[str] = Field(default_factory=list, description="GROUP BY fields")
+    
+    # Database context
+    target_tables: List[str] = Field(default_factory=list, description="Relevant database tables")
+    required_columns: List[str] = Field(default_factory=list, description="Required columns for analysis")
+    
+    # Analysis requirements
+    analysis_methods: List[str] = Field(default_factory=list, description="Required analysis methods")
+    output_format: str = Field(default="summary", description="Desired output format")
+    
+    created_at: datetime = Field(default_factory=datetime.now)
+    
+class DatabaseSchema(BaseModel):
+    """Database schema information"""
+    table_name: str
+    columns: List[Dict[str, Any]]  # column name, type, description
+    row_count: Optional[int] = None
+    sample_data: Optional[Dict[str, Any]] = None
+    relationships: List[str] = Field(default_factory=list)
+    
+class DatabaseContext(BaseModel):
+    """Complete database context"""
+    schemas: List[DatabaseSchema]
+    available_metrics: List[str] = Field(default_factory=list)
+    common_queries: List[str] = Field(default_factory=list)
+    business_context: Dict[str, Any] = Field(default_factory=dict)
+
+class DynamicAnalysisResult(BaseModel):
+    """Results from dynamic question answering"""
+    question_id: str
+    question_text: str
+    question_type: QuestionType
+    
+    # Analysis results
+    data_summary: Dict[str, Any] = Field(default_factory=dict)
+    key_findings: List[str] = Field(default_factory=list)
+    charts_data: List[Dict[str, Any]] = Field(default_factory=list)
+    
+    # Query information
+    sql_queries: List[str] = Field(default_factory=list)
+    data_sources: List[str] = Field(default_factory=list)
+    
+    # Insights
+    insights: List[str] = Field(default_factory=list)
+    recommendations: List[str] = Field(default_factory=list)
+    
+    # Metadata
+    execution_time: float = 0.0
+    data_quality_score: float = 0.0
+    confidence_score: float = 0.0
+    
+    created_at: datetime = Field(default_factory=datetime.now)
+
 # Export all models
 __all__ = [
     "AnalysisType", "DataSourceType", "ValidationLevel", "AgentStatus",
     "SekaiEvent", "DataQualityMetrics", "ValidationResult", "DataSchema",
     "AnalysisRequest", "AgentTaskResult", "AnalysisResult", "TemplateConfig",
     "SekaiContext", "SystemMetrics", "serialize_dataframe", "deserialize_dataframe",
-    "RecommendationEvent", "RecommendationAnalysisResult", "RecommendationInsight"
+    "RecommendationEvent", "RecommendationAnalysisResult", "RecommendationInsight",
+    "QuestionType", "UserQuestion", "DatabaseSchema", "DatabaseContext", "DynamicAnalysisResult"
 ] 
