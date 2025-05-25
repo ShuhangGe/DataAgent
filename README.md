@@ -1,275 +1,163 @@
-# 🤖 Dynamic Multi-Agent Question-Answering System
+# Event-Based User Analysis System
 
-**Ask questions about your data in natural language!**
+A modular data analysis system that processes event logs and performs user segmentation based on registration time and behavioral patterns. **Now powered by LangGraph** for reliable, stateful agent workflows with enhanced control and observability.
 
-A powerful multi-agent system built with CrewAI that understands natural language questions and coordinates specialized agents to provide accurate, insightful answers about your data.
+## Architecture
 
-## 🎯 What Makes This Special?
+🔄 **LangGraph-Powered Pipeline:**
+1. **Data Processor** (`DataProcess/`) - Processes raw CSV data and saves device event dictionaries to database
+2. **LangGraph Agent** (`langgraph_agent.py`) - Stateful, controllable agent that analyzes device behavior patterns
 
-**Dynamic Question Understanding**: Instead of fixed analysis workflows, the system understands what you're asking and creates custom workflows tailored to your specific questions.
+## Why LangGraph?
 
-**Natural Language Interface**: Ask questions like a human:
-- "What data do we have?"
-- "Show me user activity trends over the last month"
-- "Compare new vs returning users"
-- "How many users are active daily?"
-- "What factors correlate with user retention?"
+Based on [LangGraph's capabilities](https://langchain-ai.github.io/langgraph/), our system now provides:
 
-## 🚀 Quick Start
+✅ **Controllable Workflows**: Step-by-step execution control and monitoring  
+✅ **Stateful Analysis**: Maintains context and conversation history  
+✅ **Error Recovery**: Built-in fault tolerance and retry mechanisms  
+✅ **Human-in-the-Loop**: Easy integration of approval workflows  
+✅ **Observability**: Full workflow monitoring and debugging  
+✅ **Production Ready**: Reliable agents designed for real-world deployment  
 
-### 1. Ask a Question
-```bash
-python main.py ask "What data do we have?"
-```
+## Requirements Implemented
 
-### 2. Get Question Suggestions
-```bash
-python main.py suggest-questions
-```
+✅ **Data Input & Preprocessing:**
+- Filter dataset to include only users from the United States
+- Remove all users who have clicked (events contain click-type actions)
+- Use `device_id` as the unique user identifier (primary key)
+- Save event-time pairs as dictionary structures
 
-### 3. Start Interactive Mode
-```bash
-python main.py interactive
-```
+✅ **LangGraph Agent Analysis:**
+- Multi-step workflow for device behavior analysis
+- Stateful conversation management
+- Generate insights about user patterns and temporal behaviors
+- Create actionable business recommendations
+- Built-in error handling and recovery
 
-## 💬 Supported Question Types
+✅ **Technical Requirements:**
+- Uses `pandas` for data handling
+- Assumes timestamps are in UTC
+- Modular script with clear function separation
+- **Uses LangGraph as the agent framework** (replaces CrewAI)
+- Database persistence for processed data
+- Clean, readable code with comprehensive monitoring
 
-| Question Type | Examples | What It Does |
-|--------------|----------|--------------|
-| **Data Exploration** | "What data do we have?", "Show me available tables" | Discovers available data sources and structure |
-| **Statistical Summary** | "Show me user summary", "How many users are active?" | Generates descriptive statistics and summaries |
-| **Trend Analysis** | "How has engagement changed over time?", "Show monthly trends" | Analyzes changes and patterns over time |
-| **Comparison** | "Compare new vs returning users", "Mobile vs web usage" | Compares different segments or groups |
-| **Correlation** | "What factors correlate with retention?", "Usage vs revenue relationship" | Finds relationships between variables |
-| **Prediction** | "Predict user churn", "Forecast next month's usage" | Builds predictive models and forecasts |
+## Setup
 
-## 🏗️ Architecture
-
-### 6 Specialized Agents Working Together
-
-```mermaid
-graph TD
-    A[🧠 Dynamic Manager] --> B[📥 Data Pulling Agent]
-    A --> C[🔧 Preprocessing Agent] 
-    A --> D[📊 Analysis Agent]
-    A --> E[✅ QA Agent]
-    A --> F[💡 Insight Agent]
-    
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-```
-
-| Agent | Role | Capabilities |
-|-------|------|-------------|
-| **🧠 Dynamic Manager** | Question-Answering Orchestrator | Natural language understanding, workflow planning, agent coordination |
-| **📥 Data Pulling Agent** | Dynamic Data Retrieval | Database querying, multi-source extraction, schema-aware retrieval |
-| **🔧 Preprocessing Agent** | Adaptive Data Processing | Data cleaning, feature engineering, type conversion |
-| **📊 Analysis Agent** | Question-Driven Analytics | Statistical analysis, trends, comparisons, correlations, predictions |
-| **✅ QA Agent** | Result Validation Expert | Quality assessment, result validation, significance testing |
-| **💡 Insight Agent** | Answer Synthesis Expert | Natural language generation, insight synthesis, recommendations |
-
-### Dynamic Workflow Creation
-
-Each question gets a **custom workflow** based on its requirements:
-
-- **"What data do we have?"** → Manager + Data Pulling + Insight
-- **"Show me user trends"** → Manager + Data Pulling + Preprocessing + Analysis + Insight
-- **"Predict user churn"** → All 6 agents with advanced modeling
-
-## 🛠️ Installation & Setup
-
-### Prerequisites
-- Python 3.11+
-- OpenAI API key
-- Database connection (PostgreSQL, MySQL, SQLite, etc.)
-
-### Install Dependencies
+1. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-### Configure Environment
+2. Set up OpenAI API key (required for LangGraph agent):
 ```bash
-cp env.example .env
-# Edit .env with your settings:
-# OPENAI_API_KEY=your_key_here
-# DATABASE_URL=your_database_url
+export OPENAI_API_KEY="your-api-key-here"
 ```
 
-### Verify Setup
+3. **Step 1: Process Data** (Run once or when data changes)
 ```bash
-python main.py check-system
+python run_data_processing.py
 ```
 
-## 📊 Example Usage
-
-### Data Exploration
+4. **Step 2: Run LangGraph Agent Analysis** (Can run multiple times)
 ```bash
-python main.py ask "What data do we have in the users table?"
-```
-**Response**: Shows table schema, sample data, available metrics
-
-### Statistical Analysis  
-```bash
-python main.py ask "Show me a summary of daily active users"
-```
-**Response**: Count, averages, trends, key statistics
-
-### Time-Based Analysis
-```bash
-python main.py ask "How has user engagement changed over the last 3 months?"
-```
-**Response**: Trend analysis, growth rates, seasonal patterns
-
-### Comparative Analysis
-```bash
-python main.py ask "Compare user behavior between mobile and web platforms"
-```
-**Response**: Side-by-side comparison, key differences, insights
-
-### Advanced Analytics
-```bash
-python main.py ask "What factors are most predictive of user churn?"
-```
-**Response**: Correlation analysis, feature importance, recommendations
-
-## 🔧 Configuration
-
-### Database Setup
-The system supports multiple database types:
-
-```python
-# PostgreSQL
-DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
-
-# MySQL  
-DATABASE_URL=mysql://user:pass@localhost:3306/mydb
-
-# SQLite
-DATABASE_URL=sqlite:///data/mydb.db
+python main.py
 ```
 
-### OpenAI Configuration
-```python
-OPENAI_API_KEY=your_api_key
-OPENAI_MODEL=gpt-4o  # Latest model
-OPENAI_TEMPERATURE=0.1
+## Project Structure
+
+```
+├── main.py                    # Main entry point (LangGraph agent analysis)
+├── run_data_processing.py     # Data processing entry point
+├── langgraph_agent.py         # LangGraph-based behavior analysis agent
+├── DataProcess/               # Data processing package
+│   ├── __init__.py
+│   ├── data_processor.py      # Data processing pipeline
+│   ├── data_analysis.py       # Core analysis functions
+│   └── data_processor_README.md  # Detailed processor documentation
+├── requirements.txt           # LangGraph and processing dependencies
+├── event_analysis.db          # SQLite database (created by data processor)
+└── README.md                  # This file
 ```
 
-## 🎮 Interactive Mode
+## LangGraph Workflow
 
-Start an interactive session for multiple questions:
+The LangGraph agent follows this stateful workflow:
 
-```bash
-python main.py interactive
+```
+Initialize Analysis
+        ↓
+Load Database Data
+        ↓
+Analyze Behavior Patterns  ← LLM Analysis
+        ↓
+Generate Business Insights ← LLM Insights
+        ↓
+Create Recommendations    ← LLM Strategy
+        ↓
+Finalize Report
 ```
 
-Available commands in interactive mode:
-- Type your question naturally
-- `suggestions` - Get question ideas
-- `history` - Show your session history  
-- `help` - Show available commands
-- `quit` - Exit
+Each step maintains state and can be interrupted, resumed, or modified.
 
-## 📋 CLI Commands
+## Database Tables
 
-| Command | Description |
-|---------|-------------|
-| `ask "question"` | Ask a question about your data |
-| `suggest-questions` | Get question suggestions based on your data |
-| `interactive` | Start interactive Q&A session |
-| `list-agents` | Show all available agents |
-| `check-system` | Verify system configuration |
-| `version` | Show version information |
+The data processor creates these tables:
+- `device_event_dictionaries` - Device records with event-time pairs as JSON
+- `device_dict_summary` - Processing and summary statistics
 
-## 🔍 How It Works
+## Benefits of LangGraph Architecture
 
-### 1. Question Understanding
-The system analyzes your natural language question to:
-- Detect question type (exploration, summary, trend, etc.)
-- Extract entities (tables, columns, metrics)
-- Identify time filters and conditions
-- Determine required analysis methods
+✅ **Reliability** - [LangGraph's stateful design](https://github.com/langchain-ai/langgraph) handles complex workflows robustly  
+✅ **Control** - Step-by-step execution with checkpoints and rollback  
+✅ **Observability** - Full workflow monitoring and debugging capabilities  
+✅ **Scalability** - Production-ready agent deployment with LangGraph Platform  
+✅ **Flexibility** - Easy to modify workflows and add human approval steps  
+✅ **State Management** - Persistent conversation context across sessions  
 
-### 2. Dynamic Planning
-Based on your question, it:
-- Inspects your database schema
-- Identifies relevant data sources
-- Creates a custom workflow
-- Estimates execution time
+## LangGraph Features Used
 
-### 3. Agent Coordination
-The workflow coordinates multiple agents:
-- **Data extraction** from relevant sources
-- **Data preparation** based on analysis needs
-- **Analysis execution** using appropriate methods
-- **Quality validation** of results
-- **Insight generation** in natural language
+🎯 **StateGraph**: Defines the multi-step analysis workflow  
+�� **State Management**: Maintains analysis context throughout execution  
+🔄 **Node-Based Processing**: Each analysis step as a separate, controllable node  
+🛡️ **Error Handling**: Built-in recovery and fault tolerance  
+📊 **Structured Output**: Type-safe state management with TypedDict  
 
-### 4. Answer Delivery
-You receive:
-- Direct answers to your questions
-- Supporting data and statistics
-- Insights and recommendations
-- Visualizations (when applicable)
+## Output
 
-## 🚀 Advanced Features
+**Data Processor Output:**
+- Database tables with device event dictionaries
+- Processing statistics and data quality metrics
 
-### Schema-Aware Querying
-The system automatically:
-- Discovers available tables and columns
-- Suggests relevant questions based on your data
-- Adapts queries to your specific schema
+**LangGraph Agent Output:**
+- Stateful behavior pattern analysis
+- Business intelligence insights with metrics
+- Strategic recommendations with priorities
+- Complete workflow state for follow-up analysis
 
-### Quality Assurance
-Every analysis includes:
-- Data quality validation
-- Statistical significance testing
-- Business rule validation
-- Confidence scoring
+## Advanced LangGraph Capabilities
 
-### Extensible Architecture
-Easy to extend with:
-- New question types
-- Custom analysis methods
-- Additional data sources
-- Domain-specific insights
+The system is designed to leverage LangGraph's advanced features:
 
-## 🛡️ Error Handling
+🔄 **Streaming**: Real-time analysis progress (can be enabled)  
+👥 **Human-in-the-Loop**: Easy addition of approval workflows  
+🔍 **Debugging**: Step-by-step execution inspection  
+📈 **Scaling**: Compatible with LangGraph Platform for production deployment  
+🎯 **Customization**: Modular workflow nodes for easy modification  
 
-The system gracefully handles:
-- Invalid questions or unclear requests
-- Missing data or connection issues
-- Analysis failures with automatic recovery
-- Quality issues with validation warnings
+## Migration from CrewAI
 
-## 📈 Performance
+This system has been upgraded from CrewAI to LangGraph for:
+- Better reliability and production readiness
+- Enhanced state management and persistence
+- Superior error handling and recovery
+- More controllable agent behavior
+- Built-in observability and debugging
 
-- **Question Understanding**: ~2-5 seconds
-- **Simple Queries**: ~30-60 seconds  
-- **Complex Analysis**: ~2-5 minutes
-- **Predictive Modeling**: ~5-10 minutes
+## Learn More
 
-## 🤝 Contributing
+- 📚 [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
+- 🐙 [LangGraph GitHub](https://github.com/langchain-ai/langgraph)
+- 🎓 [LangChain Academy](https://academy.langchain.com/)
 
-1. Fork the repository
-2. Create a feature branch
-3. Add your enhancements
-4. Write tests for new functionality
-5. Submit a pull request
-
-## 📜 License
-
-MIT License - see LICENSE file for details
-
-## 🆘 Support
-
-- **Documentation**: Check this README and inline comments
-- **Issues**: Open a GitHub issue
-- **Questions**: Use the interactive mode to ask about the system itself!
-
----
-
-**Transform your data into insights with natural language questions!** 🚀 
+This architecture follows workflow.txt requirements while providing enterprise-grade reliability and control through LangGraph's stateful agent framework. 
