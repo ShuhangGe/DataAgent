@@ -6,8 +6,8 @@ config.yaml
 
 # Analysis outputs
 results.json
-analysis_report.md
-*_analysis_report.md
+# analysis_report.md
+# *_analysis_report.md
 *_report.md
 *.db
 
