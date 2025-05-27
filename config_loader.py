@@ -31,10 +31,18 @@ class ConfigLoader:
             'enable_recommendations': True
         },
         'output': {
-            'default_file': 'results.json',
+            'default_file': 'analysis_report.md',
+            'format': 'report',
             'auto_save': True,
             'include_raw_data': False,
-            'pretty_print': True
+            'report': {
+                'include_summary': True,
+                'include_statistics': True,
+                'include_visualizations': True,
+                'include_ai_insights': True,
+                'include_recommendations': True,
+                'include_technical_details': False
+            }
         },
         'logging': {
             'level': 'INFO',

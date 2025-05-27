@@ -67,11 +67,32 @@ analysis:
 ### Output Configuration
 ```yaml
 output:
-  default_file: "results.json"  # Output file path
-  auto_save: true              # Automatically save results
-  include_raw_data: false      # Include raw data in output
-  pretty_print: true           # Format JSON for readability
+  default_file: "analysis_report.md"  # Output file path
+  format: "report"                    # Output format: "report" or "json"
+  auto_save: true                     # Automatically save results
+  include_raw_data: false             # Include raw data (JSON format only)
+  
+  # Report configuration (when format is "report")
+  report:
+    include_summary: true             # Executive summary section
+    include_statistics: true          # Key statistics and metrics
+    include_visualizations: true      # Event pattern tables/charts
+    include_ai_insights: true         # AI-generated insights
+    include_recommendations: true     # Actionable recommendations
+    include_technical_details: false  # Technical details and logs
 ```
+
+**Output Formats:**
+- `report` - Comprehensive markdown report (recommended)
+- `json` - Raw JSON data for programmatic use
+
+**Report Sections:**
+- **Executive Summary** - High-level overview and key findings
+- **Statistics** - Session counts, event frequencies, conversion rates
+- **Visualizations** - Event transitions, temporal patterns, sequences
+- **AI Insights** - LLM-generated behavioral analysis
+- **Recommendations** - Actionable suggestions for improvement
+- **Technical Details** - Workflow logs and debugging information
 
 ### Logging Configuration
 ```yaml
@@ -228,6 +249,11 @@ python -c "from config_loader import load_config; config = load_config('your_con
    - Use a YAML validator online
    - Ensure no tabs (use spaces only)
 
+6. **"Report generation failed"**
+   - Check output directory permissions
+   - Ensure sufficient disk space
+   - Verify report configuration settings
+
 ### Getting Help
 
 1. **View current configuration:**
@@ -241,7 +267,12 @@ python -c "from config_loader import load_config; config = load_config('your_con
    python config_loader.py
    ```
 
-3. **Validate YAML syntax:**
+3. **Test report generation:**
+   ```bash
+   python report_generator.py
+   ```
+
+4. **Validate YAML syntax:**
    ```bash
    python -c "import yaml; yaml.safe_load(open('config.yaml'))"
    ```
@@ -254,14 +285,17 @@ python -c "from config_loader import load_config; config = load_config('your_con
    - ✅ Copy `config_example.yaml` to `config.yaml` and customize for your needs
    - ✅ Use environment-specific config files (`config_dev.yaml`, `config_prod.yaml`)
    - ❌ Never commit files with API keys or sensitive paths
+   - ❌ Analysis reports are also ignored by git (contain sensitive insights)
 
 2. **Security:**
    - Never commit API keys to version control
    - Use environment variables for sensitive data
    - Set appropriate file permissions on config files
+   - Be cautious with report sharing (may contain business insights)
 
 3. **Organization:**
    - Use descriptive config file names (`config_prod.yaml`, `config_dev.yaml`)
+   - Use descriptive report file names (`weekly_analysis_report.md`)
    - Document custom configurations
    - Keep backups of working configurations
 
@@ -269,4 +303,5 @@ python -c "from config_loader import load_config; config = load_config('your_con
    - Use `gpt-4o-mini` for development and testing
    - Use `gpt-4` for production analysis
    - Adjust `max_sessions` for testing with large datasets
-   - Enable parallel processing for production workloads 
+   - Enable parallel processing for production workloads
+   - Use `format: "json"` for automated processing pipelines
