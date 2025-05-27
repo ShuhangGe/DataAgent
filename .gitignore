@@ -8,7 +8,7 @@ config.yaml
 results.json
 # analysis_report.md
 # *_analysis_report.md
-*_report.md
+# *_report.md
 *.db
 
 # macOS
