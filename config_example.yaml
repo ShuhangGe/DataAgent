@@ -1,0 +1,77 @@
+# Example Configuration for Event-Based User Analysis System
+# Copy this file to config.yaml and modify as needed
+
+# Database Configuration
+database:
+  # Path to your SQLite database file
+  path: "DataProcess/event_analysis.db"
+  # Table name containing the processed device event dictionaries
+  table_name: "device_event_dictionaries"
+
+# LLM (Language Model) Configuration
+llm:
+  # Choose your preferred OpenAI model
+  # Options: gpt-4, gpt-4o, gpt-4o-mini, gpt-3.5-turbo, gpt-3.5-turbo-16k
+  model: "gpt-4"  # Using GPT-4 for higher quality analysis
+  
+  # Temperature controls creativity vs consistency
+  # 0.0 = very focused and deterministic
+  # 1.0 = balanced creativity and consistency  
+  # 2.0 = maximum creativity and randomness
+  temperature: 0.1  # Very focused for analytical tasks
+  
+  # OpenAI API key - leave empty to use OPENAI_API_KEY environment variable
+  api_key: ""
+  
+  # Optional: Maximum tokens for responses (null = use model default)
+  max_tokens: 2000
+  
+  # Request timeout in seconds
+  timeout: 120
+
+# Analysis Configuration
+analysis:
+  # Print detailed event pattern insights
+  print_details: true
+  
+  # Include AI-generated insights in the analysis
+  enable_ai_insights: true
+  
+  # Generate actionable recommendations
+  enable_recommendations: true
+
+# Output Configuration
+output:
+  # Output file for saving analysis results
+  default_file: "detailed_analysis_results.json"
+  
+  # Automatically save results after analysis
+  auto_save: true
+  
+  # Include raw data in output file (makes file larger)
+  include_raw_data: true
+  
+  # Pretty print JSON output (more readable but larger)
+  pretty_print: true
+
+# Logging Configuration
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "DEBUG"  # Verbose logging for troubleshooting
+  
+  # Save logs to file
+  log_to_file: true
+  
+  # Log file path
+  log_file: "analysis_debug.log"
+
+# Performance Configuration
+performance:
+  # Maximum number of user sessions to process (0 = no limit)
+  max_sessions: 10000  # Limit for faster testing
+  
+  # Batch size for processing large datasets
+  batch_size: 500
+  
+  # Enable parallel processing where possible
+  enable_parallel: true 
