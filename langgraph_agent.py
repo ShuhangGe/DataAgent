@@ -21,6 +21,8 @@ from langchain.schema import HumanMessage, SystemMessage
 class AnalysisState(TypedDict):
     messages: List[str]
     database_path: str
+    database_config: Dict[str, Any]  # Database configuration (path, table_name)
+    llm_config: Dict[str, Any]  # LLM configuration (model, temperature, api_key)
     raw_data: pd.DataFrame
     event_patterns: Dict[str, Any]
     behavioral_insights: Dict[str, Any]
@@ -30,13 +32,15 @@ class AnalysisState(TypedDict):
     print_details: bool
 
 class EventRelationshipAnalyzer:
-    """Advanced analyzer for event relationships and behavioral patterns"""
+    """Advanced analyzer for event relationships and behavioral patterns
+    """
     
     def __init__(self, llm):
         self.llm = llm
     
     def analyze_event_sequences(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """Analyze event sequences and transitions"""
+        """Analyze event sequences and transitions
+        get event sequences for each user and event transitions for the whole datsset."""
         sequences = {}
         transitions = defaultdict(lambda: defaultdict(int))
         session_patterns = []
@@ -75,9 +79,9 @@ class EventRelationshipAnalyzer:
     def analyze_temporal_patterns(self, df: pd.DataFrame) -> Dict[str, Any]:
         """Analyze temporal patterns in events"""
         temporal_analysis = {
-            'hourly_distribution': defaultdict(int),
+            'hourly_distribution': defaultdict(int),#caculate the number of event happened in each hour and day.
             'daily_distribution': defaultdict(int),
-            'session_durations': [],
+            'session_durations': [],# Y
             'inter_event_gaps': [],
             'peak_activity_hours': [],
             'user_activity_patterns': {}
@@ -234,6 +238,15 @@ class EventRelationshipAnalyzer:
 def initialize_analysis(state: AnalysisState) -> AnalysisState:
     """Initialize the analysis workflow"""
     state["messages"].append("🚀 Starting Event Relationship Analysis...")
+    
+    # Display LLM configuration
+    llm_config = state.get("llm_config", {})
+    if llm_config:
+        model = llm_config.get("model", "Unknown")
+        temperature = llm_config.get("temperature", "Unknown")
+        api_key_status = "✅ Configured" if llm_config.get("api_key") else "❌ Missing"
+        state["messages"].append(f"🤖 LLM Configuration: {model} (temp: {temperature}, API key: {api_key_status})")
+    
     state["current_step"] = "initialization"
     
     # Set default database path if not provided
@@ -246,25 +259,30 @@ def load_processed_data(state: AnalysisState) -> AnalysisState:
     """Load processed data from database"""
     try:
         state["messages"].append(f"📊 Loading processed event data from: {state['database_path']}...")
+        
+        # Get table name from database config if available, otherwise use default
+        database_config = state.get("database_config", {})
+        table_name = database_config.get("table_name", "device_event_dictionaries")
+        
         conn = sqlite3.connect(state["database_path"])
-        query = """
+        query = f"""
         SELECT device_id, event, timestamp, uuid, distinct_id, country, timezone, newDevice,
                event_time_pairs, total_events, first_event_time, last_event_time, 
                event_types, time_span_hours
-        FROM device_event_dictionaries
+        FROM {table_name}
         """
         df = pd.read_sql_query(query, conn)
         conn.close()
         
         if df.empty:
-            err_msg = "No processed data found in database table 'device_event_dictionaries'."
+            err_msg = f"No processed data found in database table '{table_name}'."
             state["error_message"] = err_msg
             state["messages"].append(f"❌ {err_msg}")
             state["raw_data"] = pd.DataFrame() # Ensure raw_data is an empty DataFrame
             return state
         
         state["raw_data"] = df
-        state["messages"].append(f"✅ Loaded {len(df)} user sessions with event sequences.")
+        state["messages"].append(f"✅ Loaded {len(df)} user sessions with event sequences from table '{table_name}'.")
         state["current_step"] = "data_loaded"
         state["error_message"] = "" # Clear previous errors
         
@@ -322,16 +340,21 @@ def generate_behavioral_insights(state: AnalysisState) -> AnalysisState:
             state["behavioral_insights"] = {} # Ensure key exists
             return state
 
-        # Check for OpenAI API Key
-        api_key = os.getenv("OPENAI_API_KEY")
+        # Get LLM configuration from state
+        llm_config = state.get("llm_config", {})
+        api_key = llm_config.get("api_key")
+        model = llm_config.get("model", "gpt-4o-mini")
+        temperature = llm_config.get("temperature", 0.3)
+        
         if not api_key:
-            err_msg = "OPENAI_API_KEY environment variable not set."
+            err_msg = "OpenAI API key not provided in LLM configuration."
             state["error_message"] = err_msg
             state["messages"].append(f"❌ Critical: {err_msg}")
             state["behavioral_insights"] = {}
             return state
 
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3, api_key=api_key)
+        state["messages"].append(f"🤖 Using LLM: {model} (temperature: {temperature})")
+        llm = ChatOpenAI(model=model, temperature=temperature, api_key=api_key)
         patterns = state["event_patterns"]
         
         # Simplified summary for LLM to reduce complexity if needed, or ensure robust access
@@ -350,6 +373,7 @@ def generate_behavioral_insights(state: AnalysisState) -> AnalysisState:
         Data Summary: {json.dumps(analysis_summary, indent=2, default=str)}
         Please provide: Key behavioral patterns, event relationship insights, user engagement patterns, potential optimization opportunities, and anomalies.
         Focus on actionable insights. Keep the response concise.
+        expose_foru_sekai_card means the user exposed to the 'for you' recommandation
         """
         messages = [
             SystemMessage(content="You are an expert data analyst specializing in user behavior and event analytics."),
@@ -462,11 +486,40 @@ def create_event_analysis_workflow():
     
     return workflow.compile()
 
-def run_event_relationship_analysis(database_path: str = "DataProcess/event_analysis.db", print_details: bool = False):
-    """Run the complete event relationship analysis"""
+def run_event_relationship_analysis(database_path: str = "DataProcess/event_analysis.db", print_details: bool = False, llm_config: Dict[str, Any] = None, database_config: Dict[str, Any] = None):
+    """Run the complete event relationship analysis
+    
+    Args:
+        database_path: Path to the SQLite database containing processed event data
+        print_details: Whether to print detailed analysis results
+        llm_config: Dictionary containing LLM configuration:
+                   - model: LLM model name (e.g., "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo")
+                   - temperature: Temperature for LLM responses (0.0-2.0)
+                   - api_key: OpenAI API key
+        database_config: Dictionary containing database configuration:
+                        - path: Database file path
+                        - table_name: Table name containing processed data
+    """
+    # Set default LLM config if not provided
+    if llm_config is None:
+        llm_config = {
+            "model": "gpt-4o-mini",
+            "temperature": 0.3,
+            "api_key": os.getenv("OPENAI_API_KEY")
+        }
+    
+    # Set default database config if not provided
+    if database_config is None:
+        database_config = {
+            "path": database_path,
+            "table_name": "device_event_dictionaries"
+        }
+    
     initial_state = AnalysisState(
         messages=[],
         database_path=database_path,
+        database_config=database_config,
+        llm_config=llm_config,
         raw_data=pd.DataFrame(),
         event_patterns={},
         behavioral_insights={},
