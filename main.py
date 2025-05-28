@@ -10,6 +10,7 @@ import json # For saving results to JSON
 from langgraph_agent import run_event_relationship_analysis
 from config_loader import load_config
 from report_generator import generate_analysis_report
+
 import pandas as pd
 
 # Helper to convert DataFrame to JSON serializable format
@@ -150,6 +151,7 @@ def main():
         print(f"📄 Output Configuration:")
         print(f"   Format: {output_config.get('format', 'json').upper()}")
         print(f"   File: {output_config['default_file']}")
+
         print("📊 LangGraph benefits:")
         print("  • Stateful conversation management")
         print("  • Controllable multi-step workflows")
@@ -173,6 +175,7 @@ def main():
                 save_success = save_results(results, output_config)
                 if not save_success:
                     print("⚠️  Analysis completed but output saving failed.")
+
         else:
             print("\n❌ LangGraph Analysis Workflow Encountered an Error.")
             print(f"   Final Step Reached: {results.get('current_step', 'N/A')}")
@@ -187,6 +190,7 @@ def main():
                     print(f"✅ Failed state saved for debugging.")
                 else:
                     print(f"❌ Could not save failed state.")
+
             return False
         
     except Exception as e:
@@ -224,6 +228,7 @@ def show_langgraph_info():
     print("  • Executive summaries and key insights")
     print("  • Statistical analysis and visualizations")
     print("  • AI-generated insights and recommendations")
+
 
 if __name__ == "__main__":
     # Show LangGraph information
