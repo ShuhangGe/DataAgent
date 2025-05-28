@@ -10,7 +10,7 @@ def load_data():
     Returns:
         pd.DataFrame: Loaded event data
     """
-    file_path = "/Users/shuhangge/Desktop/my_projects/Sekai/DataAgent/development_doc/bq-results-20250527-055335-1748325234441.csv"
+    file_path = "/Users/shuhangge/Desktop/my_projects/Sekai/DataAgent/development_doc/mock_data.csv"
     print(f"Loading data from: {file_path}")
     
     try:
@@ -70,14 +70,13 @@ class DataProcessor:
             print("🔄 Identifying users with click events...")
             
             # Find device_ids that have click events (case-insensitive search for 'click')
-            click_devices = us_data[us_data['event'].str.contains('click', case=False, na=False)]['device_id'].unique()
+            click_devices = us_data[us_data['event'].str.contains('click_foru_sekai_card', case=False, na=False)]['device_id'].unique()
             print(f"📊 Found {len(click_devices)} devices with click events")
             
-            # # Remove all rows for devices that have any click events
-            # filtered_data = us_data[~us_data['device_id'].isin(click_devices)].copy()
-            # print(f"✅ Click filter: {len(filtered_data)} rows (removed {len(us_data) - len(filtered_data)} rows from clicking devices)")
+            # Remove all rows for devices that have any click events
+            filtered_data = us_data[~us_data['device_id'].isin(click_devices)].copy()
+            print(f"✅ Click filter: {len(filtered_data)} rows (removed {len(us_data) - len(filtered_data)} rows from clicking devices)")
             
-            filtered_data = us_data
             if len(filtered_data) == 0:
                 print("⚠️  No data remaining after filters!")
                 return None

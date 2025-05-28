@@ -10,6 +10,8 @@ results.json
 # *_analysis_report.md
 # *_report.md
 *.db
+*.csv
+
 
 # macOS
 .DS_Store
