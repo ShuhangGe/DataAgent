@@ -43,16 +43,38 @@ analysis:
 # Output Configuration
 output:
   # Output file for saving analysis results
-  default_file: "detailed_analysis_results.json"
+  default_file: "comprehensive_analysis_report.md"
+  
+  # Output format: "report" for markdown report, "json" for JSON data
+  format: "report"
+
   
   # Automatically save results after analysis
   auto_save: true
   
-  # Include raw data in output file (makes file larger)
-  include_raw_data: true
+  # Include raw data in output file (for JSON format only)
+  include_raw_data: false
   
-  # Pretty print JSON output (more readable but larger)
-  pretty_print: true
+  # Report configuration (when format is "report")
+  report:
+    # Include executive summary section
+    include_summary: true
+    
+    # Include detailed statistics and metrics
+    include_statistics: true
+    
+    # Include event pattern visualizations (tables/charts)
+    include_visualizations: true
+    
+    # Include AI-generated insights section
+    include_ai_insights: true
+    
+    # Include actionable recommendations section
+    include_recommendations: true
+    
+    # Include technical details and workflow logs
+    include_technical_details: true
+
 
 # Logging Configuration
 logging:

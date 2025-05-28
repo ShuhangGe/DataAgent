@@ -70,7 +70,7 @@ class DataProcessor:
             print("🔄 Identifying users with click events...")
             
             # Find device_ids that have click events (case-insensitive search for 'click')
-            click_devices = us_data[us_data['event'].str.contains('click', case=False, na=False)]['device_id'].unique()
+            click_devices = us_data[us_data['event'].str.contains('click_foru_sekai_card', case=False, na=False)]['device_id'].unique()
             print(f"📊 Found {len(click_devices)} devices with click events")
             
             # # Remove all rows for devices that have any click events

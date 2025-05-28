@@ -3,8 +3,30 @@ development_doc/
 
 # Configuration files with sensitive data
 config.yaml
+
+# Analysis outputs and generated files
 results.json
+*.json
+*.csv
 *.db
+# analysis_report.md
+# *_analysis_report.md
+# *_report.md
+
+# Analysis tool outputs (specific files)
+returning_users_analysis.json
+non_returning_users_analysis.json
+event_statistics.json
+output.csv
+event_pairs_sample.json
+common_patterns.json
+top_10_devices_summary.csv
+top_10_devices_detailed.json
+
+# Tools folder outputs
+tools/*.json
+tools/*.csv
+
 
 # macOS
 .DS_Store

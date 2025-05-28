@@ -9,6 +9,8 @@ import sys
 import json # For saving results to JSON
 from langgraph_agent import run_event_relationship_analysis
 from config_loader import load_config
+from report_generator import generate_analysis_report
+
 import pandas as pd
 
 # Helper to convert DataFrame to JSON serializable format
@@ -35,6 +37,51 @@ def convert_state_to_json_serializable(state_dict):
             except (TypeError, OverflowError):
                 serializable_dict[key] = str(value) # Fallback to string
     return serializable_dict
+
+def save_results(results: dict, output_config: dict) -> bool:
+    """Save analysis results in the configured format
+    
+    Args:
+        results: Analysis results from LangGraph workflow
+        output_config: Output configuration
+        
+    Returns:
+        True if saved successfully, False otherwise
+    """
+    output_file = output_config['default_file']
+    output_format = output_config.get('format', 'json').lower()
+    
+    try:
+        if output_format == 'report':
+            # Generate markdown report
+            print(f"\n📋 Generating analysis report: {output_file}")
+            success = generate_analysis_report(results, output_config, output_file)
+            if success:
+                print(f"✅ Analysis report saved successfully.")
+                return True
+            else:
+                print(f"❌ Failed to generate analysis report.")
+                return False
+        
+        else:
+            # Save as JSON (fallback)
+            print(f"\n💾 Saving analysis results as JSON: {output_file}")
+            serializable_results = convert_state_to_json_serializable(results)
+            
+            # Apply output configuration for JSON
+            if not output_config.get('include_raw_data', False) and 'raw_data' in serializable_results:
+                del serializable_results['raw_data']
+            
+            # For JSON, use pretty_print setting (default True for backward compatibility)
+            indent = 4 if output_config.get('pretty_print', True) else None
+            with open(output_file, 'w') as f:
+                json.dump(serializable_results, f, indent=indent)
+            print(f"✅ JSON results saved successfully.")
+            return True
+            
+    except Exception as e:
+        print(f"❌ Error saving results: {type(e).__name__} - {str(e)}")
+        return False
 
 def main():
     """
@@ -101,6 +148,10 @@ def main():
         print(f"   Model: {llm_config['model']}")
         print(f"   Temperature: {llm_config['temperature']}")
         print(f"   API Key: {'✅ Provided' if api_key else '❌ Missing'}")
+        print(f"📄 Output Configuration:")
+        print(f"   Format: {output_config.get('format', 'json').upper()}")
+        print(f"   File: {output_config['default_file']}")
+
         print("📊 LangGraph benefits:")
         print("  • Stateful conversation management")
         print("  • Controllable multi-step workflows")
@@ -120,23 +171,11 @@ def main():
             print("\n🎉 LangGraph Analysis Workflow Completed Successfully!")
             
             # Save results if configured
-            output_file = output_config['default_file']
-            if output_config['auto_save'] and output_file:
-                try:
-                    print(f"\n💾 Saving analysis results to: {output_file}")
-                    # Convert pandas DataFrames in results to a serializable format
-                    serializable_results = convert_state_to_json_serializable(results)
-                    
-                    # Apply output configuration
-                    if not output_config['include_raw_data'] and 'raw_data' in serializable_results:
-                        del serializable_results['raw_data']
-                    
-                    indent = 4 if output_config['pretty_print'] else None
-                    with open(output_file, 'w') as f:
-                        json.dump(serializable_results, f, indent=indent)
-                    print(f"✅ Results saved successfully.")
-                except Exception as e:
-                    print(f"❌ Error saving results to file: {type(e).__name__} - {str(e)}")
+            if output_config['auto_save']:
+                save_success = save_results(results, output_config)
+                if not save_success:
+                    print("⚠️  Analysis completed but output saving failed.")
+
         else:
             print("\n❌ LangGraph Analysis Workflow Encountered an Error.")
             print(f"   Final Step Reached: {results.get('current_step', 'N/A')}")
@@ -144,17 +183,14 @@ def main():
             print("   Check the detailed workflow log above for more information.")
             
             # Save failed state if configured
-            output_file = output_config['default_file']
-            if output_config['auto_save'] and output_file:
-                try:
-                    print(f"\n💾 Saving FAILED analysis state to: {output_file}")
-                    serializable_results = convert_state_to_json_serializable(results)
-                    indent = 4 if output_config['pretty_print'] else None
-                    with open(output_file, 'w') as f:
-                        json.dump(serializable_results, f, indent=indent)
-                    print(f"✅ Failed state saved.")
-                except Exception as e:
-                    print(f"❌ Error saving failed state to file: {type(e).__name__} - {str(e)}")
+            if output_config['auto_save']:
+                print(f"\n💾 Saving FAILED analysis state...")
+                save_success = save_results(results, output_config)
+                if save_success:
+                    print(f"✅ Failed state saved for debugging.")
+                else:
+                    print(f"❌ Could not save failed state.")
+
             return False
         
     except Exception as e:
@@ -187,6 +223,12 @@ def show_langgraph_info():
     print("  • Environment variable overrides")
     print("  • Validation and defaults for all parameters")
     print("  • Simple usage: python main.py [config.yaml]")
+    print("\n📋 Report Generation:")
+    print("  • Comprehensive markdown reports")
+    print("  • Executive summaries and key insights")
+    print("  • Statistical analysis and visualizations")
+    print("  • AI-generated insights and recommendations")
+
 
 if __name__ == "__main__":
     # Show LangGraph information

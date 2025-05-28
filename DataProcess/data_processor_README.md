@@ -211,6 +211,18 @@ Generate Summary Statistics
 - **How**: Geographic + behavioral filters
 - **Benefit**: Clean, relevant dataset
 
+### Data Quality Filters
+
+#### 1. Geographic Filter (US Users Only)
+- **Purpose**: Focus analysis on a specific market segment
+- **Implementation**: `country == 'United States'`
+- **Impact**: Ensures consistent timezone and cultural context
+
+#### 2. Click Event Filter
+- **Purpose**: Remove users who performed click events to focus on other interaction types
+- **Implementation**: Excludes any device_id that has events containing 'click' (case-insensitive)
+- **Impact**: Filters out users with specific interaction patterns
+
 ---
 
 ## 🚀 Usage Examples
@@ -368,4 +380,28 @@ The `data_processor.py` module transforms raw event logs into a sophisticated, d
 - ✅ Optimizes for device-centric analysis
 - ✅ Ensures data quality through filtering
 
-This design enables sophisticated user journey analysis, temporal pattern discovery, and behavioral segmentation while maintaining data integrity and processing efficiency. 
+This design enables sophisticated user journey analysis, temporal pattern discovery, and behavioral segmentation while maintaining data integrity and processing efficiency.
+
+## Data Processing Pipeline
+
+The `data_processor.py` module implements a comprehensive data processing pipeline that:
+
+1. **Loads raw CSV event data** with automatic timestamp parsing
+2. **Applies data quality filters**:
+   - Filters to US users only (`country == 'United States'`)
+   - Removes users who have any click events (to focus on non-click interactions)
+3. **Groups events by device_id** and creates comprehensive event-time dictionaries
+4. **Saves processed data** to SQLite database with rich metadata
+5. **Generates summary statistics** for data quality monitoring
+
+### Data Quality Filters
+
+#### 1. Geographic Filter (US Users Only)
+- **Purpose**: Focus analysis on a specific market segment
+- **Implementation**: `country == 'United States'`
+- **Impact**: Ensures consistent timezone and cultural context
+
+#### 2. Click Event Filter
+- **Purpose**: Remove users who performed click events to focus on other interaction types
+- **Implementation**: Excludes any device_id that has events containing 'click' (case-insensitive)
+- **Impact**: Filters out users with specific interaction patterns 
