@@ -122,7 +122,6 @@ class DataProcessor:
                     'first_event_time': event_time_pairs[0]['timestamp'],
                     'last_event_time': event_time_pairs[-1]['timestamp'],
                     'event_types': json.dumps(list(group['event'].unique())),  # List of unique events
-                    'time_span_hours': (group['timestamp'].max() - group['timestamp'].min()).total_seconds() / 3600
                 }
                 
                 device_data.append(device_record)
