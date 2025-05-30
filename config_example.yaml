@@ -47,6 +47,7 @@ output:
   
   # Output format: "report" for markdown report, "json" for JSON data
   format: "report"
+
   
   # Automatically save results after analysis
   auto_save: true
@@ -73,6 +74,7 @@ output:
     
     # Include technical details and workflow logs
     include_technical_details: true
+
 
 # Logging Configuration
 logging:

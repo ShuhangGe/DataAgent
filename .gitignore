@@ -27,6 +27,7 @@ top_10_devices_detailed.json
 tools/*.json
 tools/*.csv
 
+
 # macOS
 .DS_Store
 .DS_Store?

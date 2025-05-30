@@ -94,6 +94,7 @@ output:
 - **Recommendations** - Actionable suggestions for improvement
 - **Technical Details** - Workflow logs and debugging information
 
+
 ### Logging Configuration
 ```yaml
 logging:
@@ -249,6 +250,7 @@ python -c "from config_loader import load_config; config = load_config('your_con
    - Use a YAML validator online
    - Ensure no tabs (use spaces only)
 
+
 6. **"Report generation failed"**
    - Check output directory permissions
    - Ensure sufficient disk space
@@ -266,6 +268,7 @@ python -c "from config_loader import load_config; config = load_config('your_con
    ```bash
    python config_loader.py
    ```
+
 
 3. **Test report generation:**
    ```bash
@@ -296,6 +299,7 @@ python -c "from config_loader import load_config; config = load_config('your_con
 3. **Organization:**
    - Use descriptive config file names (`config_prod.yaml`, `config_dev.yaml`)
    - Use descriptive report file names (`weekly_analysis_report.md`)
+
    - Document custom configurations
    - Keep backups of working configurations
 
@@ -305,3 +309,4 @@ python -c "from config_loader import load_config; config = load_config('your_con
    - Adjust `max_sessions` for testing with large datasets
    - Enable parallel processing for production workloads
    - Use `format: "json"` for automated processing pipelines
+

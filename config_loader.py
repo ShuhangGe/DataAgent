@@ -43,6 +43,7 @@ class ConfigLoader:
                 'include_recommendations': True,
                 'include_technical_details': False
             }
+
         },
         'logging': {
             'level': 'INFO',
